@@ -21,8 +21,16 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#include <Arduino.h>
-#include <SPI.h>
+#ifdef ARCH_ESP32
+  #include <stdio.h>
+  #include <string.h>
+#else
+  #include <Arduino.h>
+  #include <SPI.h>
+#endif
+
+#define MAX_DEBUG 1
+
 #include "MD_MAX72xx.h"
 #include "MD_MAX72xx_lib.h"
 
@@ -30,24 +38,42 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  * \file
  * \brief Implements class definition and general methods
  */
+#ifdef ARCH_ESP32
+MD_MAX72XX::MD_MAX72XX(spi_device_handle_t spi, uint8_t numDevices):
+_spi(spi), _maxDevices(numDevices), _updateEnabled(true)
+{
+}
 
+#else
 MD_MAX72XX::MD_MAX72XX(uint8_t dataPin, uint8_t clkPin, uint8_t csPin, uint8_t numDevices):
-_dataPin(dataPin), _clkPin(clkPin), _csPin(csPin), _maxDevices(numDevices),
-_updateEnabled(true), _hardwareSPI(false)
+_dataPin(dataPin), _clkPin(clkPin), _csPin(csPin), _hardwareSPI(false),_maxDevices(numDevices),
+_updateEnabled(true)
 {
 }
 
 MD_MAX72XX::MD_MAX72XX(uint8_t csPin, uint8_t numDevices):
-_dataPin(0), _clkPin(0), _csPin(csPin), _maxDevices(numDevices),
-_updateEnabled(true), _hardwareSPI(true)
+_dataPin(0), _clkPin(0), _csPin(csPin), _hardwareSPI(false), _maxDevices(numDevices),
+_updateEnabled(true)
 {
 }
+#endif
 
 void MD_MAX72XX::begin(void)
 {
+  PRINTS("BEGIN");
+  PRINT("SPI DATA SIZE: ", SPI_DATA_SIZE);
+#ifdef ARCH_ESP32
+  // TODO: check if handle is initialized
+  // Set to shutdown mode
+  for(int i = 0; i < _maxDevices; i++) {
+    controlHardware(i, SHUTDOWN, 1);
+    spiSend();
+  }
+#else
   // initialize the AVR hardware
   if (_hardwareSPI)
   {
+    ESP_LOGD("Francisje", "NOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     PRINTS("\nHardware SPI");
     SPI.begin();
 	  SPI.setDataMode(SPI_MODE0);
@@ -64,12 +90,14 @@ void MD_MAX72XX::begin(void)
   // initialise our preferred CS pin (could be same as SS)
   digitalWrite(_csPin, HIGH);
   pinMode(_csPin, OUTPUT);
+#endif // ARCH_ESP32
 
   // object memory and internals
   setShiftDataInCallback(NULL);
   setShiftDataOutCallback(NULL);
 
   _matrix = (deviceInfo_t *)malloc(sizeof(deviceInfo_t) * _maxDevices);
+  PRINT("SPI DATA SIZE: ", SPI_DATA_SIZE);
   _spiData = (uint8_t *)malloc(SPI_DATA_SIZE);
 
 #if USE_LOCAL_FONT
@@ -100,7 +128,11 @@ void MD_MAX72XX::begin(void)
 
 MD_MAX72XX::~MD_MAX72XX(void)
 {
-	if (_hardwareSPI) SPI.end();	// reset SPI mode
+#ifdef ARCH_ESP32
+  // Nothing to do, the device SPI device should be handled by the caller
+#else
+  if (_hardwareSPI) SPI.end();	// reset SPI mode
+#endif
 
 	free(_matrix);
 	free(_spiData);
@@ -166,6 +198,10 @@ void MD_MAX72XX::controlLibrary(controlRequest_t mode, int value)
 	  case WRAPAROUND:
 		  _wrapAround = (value == ON);
 		  break;
+
+	  default:
+	    // Do nothing
+	    break;
   }
 }
 
@@ -272,6 +308,16 @@ void MD_MAX72XX::spiClearBuffer(void)
 
 void MD_MAX72XX::spiSend()
 {
+#ifdef ARCH_ESP32
+  esp_err_t ret;
+  spi_transaction_t t;
+  memset(&t, 0, sizeof(t));       //Zero out the transaction
+  t.length = SPI_DATA_SIZE;
+  t.tx_buffer = _spiData;
+  t.user=(void*)0;                //D/C needs to be set to 0
+  ret=spi_device_transmit(_spi, &t);  //Transmit!
+  assert(ret==ESP_OK);            //Should have had no issues.
+#else
   // initialise the SPI transaction
   if (_hardwareSPI)
     SPI.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0));
@@ -293,4 +339,5 @@ void MD_MAX72XX::spiSend()
   digitalWrite(_csPin, HIGH);
   if (_hardwareSPI)
     SPI.endTransaction();
+#endif //ARCH_ESP32
 }

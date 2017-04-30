@@ -32,17 +32,30 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 #define	MAX_DEBUG	0		///< Enable or disable (default) debugging output from the MD_MAX72xx library
 
-#if MAX_DEBUG
-#define	PRINT(s, v)		{ Serial.print(F(s)); Serial.print(v); }		  ///< Print a string followed by a value (decimal)
-#define	PRINTX(s, v)	{ Serial.print(F(s)); Serial.print(v, HEX); }	///< Print a string followed by a value (hex)
-#define	PRINTB(s, v)	{ Serial.print(F(s)); Serial.print(v, BIN); }	///< Print a string followed by a value (binary)
-#define	PRINTS(s)		  { Serial.print(F(s)); }							          ///< Print a string
+#ifdef ARCH_ESP32
+#include "esp_log.h"
 #else
+#endif
+
+#if MAX_DEBUG
+#ifdef ARCH_ESP32
+static const char* MAX_TAG = "MD_MAX72xx";
+#define PRINT(s, v)   { ESP_LOGD(MAX_TAG, "%s%d", s, v); }                     ///< Print a string followed by a value (decimal)
+#define PRINTX(s, v)  { ESP_LOGD(MAX_TAG, "%s%#04x",s, v); }                   ///< Print a string followed by a value (hex)
+#define PRINTB(s, v)  { ESP_LOGD(MAX_TAG, "%s%#04x",s, v); } ///< Print a string followed by a value (binary) -- not supported at this time
+#define PRINTS(s)     { ESP_LOGD(MAX_TAG, "%s", s);                            ///< Print a string
+#else
+#define PRINT(s, v)   { Serial.print(F(s)); Serial.print(v); }      ///< Print a string followed by a value (decimal)
+#define PRINTX(s, v)  { Serial.print(F(s)); Serial.print(v, HEX); } ///< Print a string followed by a value (hex)
+#define PRINTB(s, v)  { Serial.print(F(s)); Serial.print(v, BIN); } ///< Print a string followed by a value (binary)
+#define PRINTS(s)     { Serial.print(F(s)); }                       ///< Print a string
+#endif // ARCH32
+#else // MAX_DEBUG
 #define	PRINT(s, v)		///< Print a string followed by a value (decimal)
 #define	PRINTX(s, v)	///< Print a string followed by a value (hex)
 #define	PRINTB(s, v)	///< Print a string followed by a value (binary)
 #define	PRINTS(s)		  ///< Print a string
-#endif
+#endif // MAX_DEBUG
 
 // Opcodes for the MAX7221 and MAX7219
  // All OP_DIGITn are offsets from OP_DIGIT0
@@ -73,7 +86,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #define	LAST_BUFFER		(_maxDevices-1)			///< Last buffer number
 
 // variables shared in the library
-extern const uint8_t PROGMEM _sysfont_var[];		///< System variable pitch font table
+extern const uint8_t PROGMEM _sysfont_var[];    ///< System variable pitch font table
+
 
 /**
 \page pageHardware Hardware

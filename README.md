@@ -9,3 +9,25 @@ In this scenario, it is convenient to abstract out the concept of the hardware d
 The library still retains flexibility for device level control, should the developer require, through the use of overloaded class methods.
 
 [Library Documentation](https://majicdesigns.github.io/MD_MAX72XX/)
+
+## Information regarding ESP32 support
+
+Minimal ESP32 support added for use with esp-idf. The user needs to create an spi device handle and pass it to the constructor. Please add the following to the main makefile to specify the architecture:
+```
+CPPFLAGS += -DARCH_ESP32
+```
+
+Create a subfolder named components in your project folder and copy the files as in the tree below:
+
+<pre>
+├── components
+│   └── md_max7219
+│       ├── component.mk
+│       ├── include
+│       │   └── MD_MAX72xx.h
+│       ├── MD_MAX72xx_buf.cpp
+│       ├── MD_MAX72xx.cpp
+│       ├── MD_MAX72xx_font.cpp
+│       ├── MD_MAX72xx_lib.h
+│       └── MD_MAX72xx_pix.cpp
+</pre>

@@ -200,7 +200,27 @@ enough current for the number of connected modules.
 #ifndef MD_MAX72xx_h
 #define MD_MAX72xx_h
 
-#include <Arduino.h>
+#ifdef ARCH_ESP32
+  #include "driver/spi_master.h"
+  // Ports for arduino functions used by this library.
+  // copied from https://github.com/espressif/arduino-esp32
+  #include "arch/sys_arch.h"
+  typedef uint8_t  u8_t;
+  typedef int8_t   s8_t;
+  typedef uint16_t u16_t;
+  typedef int16_t  s16_t;
+  typedef uint32_t u32_t;
+  typedef int32_t  s32_t;
+  #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+  #define PROGMEM
+  #define pgm_read_byte(addr)   (*(const unsigned char *)(addr))
+  #define bitSet(value, bit) ((value) |= (1UL << (bit)))
+  #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+  typedef bool boolean;
+  #define min(a,b) ((a)<(b)?(a):(b))
+#else
+  #include <Arduino.h>
+#endif
 
 /**
  * \file
@@ -337,6 +357,23 @@ public:
 		TINV	///< Transform INVert (pixels inverted)
 	};
 
+
+#ifdef ARCH_ESP32
+	/**
+	   * Class Constructor - for ESP32 SPI interface
+	   *
+	   * Instantiate a new instance of the class. The parameters passed are used to
+	   * connect the software to the hardware. Multiple instances may co-exist
+	   * but they should not share the same hardware CS pin (SPI interface).
+	   *
+	   * \param spi         t SPI handle to use
+	   * \param numDevices  number of devices connected. Default is 1 if not supplied.
+	   *                    Memory for device buffers is dynamically allocated based
+	   *                    on this parameter.
+	   */
+	  MD_MAX72XX(spi_device_handle_t spi, uint8_t numDevices=1);
+
+#else
   /**
    * Class Constructor - arbitrary digital interface.
    *
@@ -368,6 +405,9 @@ public:
    *                    on this parameter.
    */
   MD_MAX72XX(uint8_t csPin, uint8_t numDevices=1);
+
+#endif //ARCH_ESP32
+
 
   /**
    * Initialize the object.
@@ -878,11 +918,15 @@ private:
 	uint8_t changed;        // one bit for each digit changed ('dirty bit')
   } deviceInfo_t;
 
+#ifdef ARCH_ESP32
   // SPI interface data
+  spi_device_handle_t _spi;
+#else
   uint8_t	_dataPin;		  // DATA is shifted out of this pin ...
   uint8_t	_clkPin;		  // ... signaled by a CLOCK on this pin ...
   uint8_t	_csPin;			  // ... and LOADed when the chip select pin is driven HIGH to LOW
-  bool		_hardwareSPI;	// true if SPI interface is the hardware interface
+  bool    _hardwareSPI; // true if SPI interface is the hardware interface
+#endif // ARCH_ESP32
 
   // Device buffer data
   uint8_t	_maxDevices;	// maximum number of devices in use
