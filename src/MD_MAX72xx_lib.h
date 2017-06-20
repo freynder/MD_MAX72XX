@@ -30,9 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  * \brief Includes library definitions
  */
 
-#define	MAX_DEBUG	0		///< Enable or disable (default) debugging output from the MD_MAX72xx library
-
 #ifdef ARCH_ESP32
+#include "sdkconfig.h"
 #include "esp_log.h"
 #else
 #endif
@@ -43,7 +42,7 @@ static const char* MAX_TAG = "MD_MAX72xx";
 #define PRINT(s, v)   { ESP_LOGD(MAX_TAG, "%s%d", s, v); }                     ///< Print a string followed by a value (decimal)
 #define PRINTX(s, v)  { ESP_LOGD(MAX_TAG, "%s%#04x",s, v); }                   ///< Print a string followed by a value (hex)
 #define PRINTB(s, v)  { ESP_LOGD(MAX_TAG, "%s%#04x",s, v); } ///< Print a string followed by a value (binary) -- not supported at this time
-#define PRINTS(s)     { ESP_LOGD(MAX_TAG, "%s", s);                            ///< Print a string
+#define PRINTS(s)     { ESP_LOGD(MAX_TAG, "%s", s); }                          ///< Print a string
 #else
 #define PRINT(s, v)   { Serial.print(F(s)); Serial.print(v); }      ///< Print a string followed by a value (decimal)
 #define PRINTX(s, v)  { Serial.print(F(s)); Serial.print(v, HEX); } ///< Print a string followed by a value (hex)
